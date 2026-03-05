@@ -2,6 +2,11 @@
 
 Swift macros for JSON encoding and decoding using [swift-json](https://github.com/tayloraswift/swift-json).
 
+> [!NOTE]
+> The macro implementation was done using Claude Opus 4.6 under human supervision. 
+> Use at your own risk.
+
+
 ## Usage
 
 ```swift
@@ -61,7 +66,7 @@ struct Event {
 ## Installation
 
 ```swift
-.package(url: "https://github.com/yourname/swift-json-macros", from: "1.0.0")
+.package(url: "https://github.com/yourname/swift-json-macros", branch: "main")
 ```
 
 ```swift
@@ -69,3 +74,9 @@ struct Event {
     .product(name: "JSONMacros", package: "swift-json-macros"),
 ])
 ```
+
+## License
+
+Copyright 2026 Tobias Haeberle
+
+Licensed under the Apache License, Version 2.0. See [LICENSE](LICENSE) for details.
