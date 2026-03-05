@@ -66,7 +66,7 @@ struct Event {
 ## Installation
 
 ```swift
-.package(url: "https://github.com/yourname/swift-json-macros", branch: "main")
+.package(url: "https://github.com/t089/swift-json-macros", branch: "main")
 ```
 
 ```swift
