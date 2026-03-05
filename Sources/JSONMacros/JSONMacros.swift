@@ -10,6 +10,11 @@ public macro JSONDecodable() =
 public macro JSONEncodable() =
   #externalMacro(module: "JSONMacrosPlugin", type: "JSONEncodableMacro")
 
+@attached(member, names: named(init(json:)), named(encode(to:)))
+@attached(extension, conformances: JSONDecodable, JSONEncodable)
+public macro JSONCodable() =
+  #externalMacro(module: "JSONMacrosPlugin", type: "JSONCodableMacro")
+
 @attached(peer)
 public macro JSONKey(_ name: String) =
   #externalMacro(module: "JSONMacrosPlugin", type: "JSONKeyMacro")

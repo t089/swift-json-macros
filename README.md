@@ -7,8 +7,7 @@ Swift macros for JSON encoding and decoding using [swift-json](https://github.co
 ```swift
 import JSONMacros
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct Market {
     var name: String
     var price: Double
@@ -18,10 +17,12 @@ struct Market {
 }
 ```
 
+Use `@JSONDecodable` or `@JSONEncodable` separately if you only need one direction.
+
 ### Custom keys
 
 ```swift
-@JSONDecodable @JSONEncodable
+@JSONCodable
 struct User {
     @JSONKey("user_name") var userName: String
     @JSONKey("is_active") var isActive: Bool
@@ -33,7 +34,7 @@ struct User {
 Capture unrecognized fields for round-trip fidelity:
 
 ```swift
-@JSONDecodable @JSONEncodable
+@JSONCodable
 struct Config {
     var name: String
     @JSONUnknownFields var unknownFields: JSON.Object
@@ -45,7 +46,7 @@ struct Config {
 Store arbitrary JSON values using `JSON.Node`, `JSON.Object`, or `JSON.Array`:
 
 ```swift
-@JSONDecodable @JSONEncodable
+@JSONCodable
 struct Event {
     var type: String
     var metadata: JSON.Node

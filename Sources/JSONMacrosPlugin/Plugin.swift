@@ -5,6 +5,7 @@ import SwiftSyntaxMacros
 struct JSONMacrosPlugin: CompilerPlugin {
   var providingMacros: [Macro.Type] {
     [
+      JSONCodableMacro.self,
       JSONDecodableMacro.self,
       JSONEncodableMacro.self,
       JSONKeyMacro.self,

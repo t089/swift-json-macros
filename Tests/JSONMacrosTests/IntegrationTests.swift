@@ -15,16 +15,14 @@ enum Priority: Int, JSONDecodable, JSONEncodable {
   case high = 2
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct Address {
   var street: String
   var city: String
   var zip: Int
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct BasicTypes {
   var name: String
   var age: Int
@@ -32,69 +30,60 @@ struct BasicTypes {
   var isActive: Bool
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct WithOptionals {
   var name: String
   var bio: String?
   var age: Optional<Int>
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct WithArrays {
   var tags: [String]
   var scores: [Int]
   var nested: [[Double]]
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct WithEnum {
   var name: String
   var type: MarketType
   var priority: Priority
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct WithNested {
   var name: String
   var address: Address
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct WithCustomKeys {
   @JSONKey("user_name") var userName: String
   @JSONKey("is_active") var isActive: Bool
   @JSONKey("created_at") var createdAt: String
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct WithUnknownFields {
   var name: String
   var age: Int
   @JSONUnknownFields var unknownFields: JSON.Object
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct WithArbitraryJSON {
   var name: String
   var metadata: JSON.Node
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct WithArbitraryObject {
   var name: String
   var config: JSON.Object
 }
 
-@JSONDecodable
-@JSONEncodable
+@JSONCodable
 struct Complex {
   var title: String
   var tags: [String]

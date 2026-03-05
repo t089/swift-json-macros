@@ -149,6 +149,57 @@ struct JSONEncodableTests {
     )
   }
 
+  @Test func codableMacro() {
+    let codableMacros: [String: Macro.Type] = [
+      "JSONCodable": JSONCodableMacro.self
+    ]
+
+    assertMacroExpansion(
+      """
+      @JSONCodable
+      struct User {
+          var name: String
+          var age: Int
+      }
+      """,
+      expandedSource: """
+        struct User {
+            var name: String
+            var age: Int
+
+            init(json: borrowing JSON.Node) throws {
+                let object: JSON.Object = try .init(json: json)
+                var name: String?
+                var age: Int?
+                for field: JSON.FieldDecoder<String> in copy object {
+                    switch field.key {
+                    case "name": name = try field.decode()
+                    case "age": age = try field.decode()
+                    default: break
+                    }
+                }
+                self.name = try name.unwrap(key: "name")
+                self.age = try age.unwrap(key: "age")
+            }
+
+            func encode(to json: inout JSON) {
+                json(Any.self) { encoder in
+                    encoder["name"] = self.name
+                    encoder["age"] = self.age
+                }
+            }
+        }
+
+        extension User: JSONDecodable {
+        }
+
+        extension User: JSONEncodable {
+        }
+        """,
+      macros: codableMacros
+    )
+  }
+
   @Test func unknownFields() {
     assertMacroExpansion(
       """
