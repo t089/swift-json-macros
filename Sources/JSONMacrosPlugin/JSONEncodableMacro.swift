@@ -35,9 +35,10 @@ extension JSONEncodableMacro: MemberMacro {
     }
 
     let encodingStatementsStr = encodingStatements.joined(separator: "\n            ")
+    let access = accessLevel(of: declaration)
 
     let encodeDecl: DeclSyntax = """
-      func encode(to json: inout JSON) {
+      \(raw: access)func encode(to json: inout JSON) {
           json(Any.self) { encoder in
               \(raw: encodingStatementsStr)
           }

@@ -63,9 +63,10 @@ extension JSONDecodableMacro: MemberMacro {
     let varDeclsStr = varDecls.joined(separator: "\n        ")
     let switchCasesStr = switchCases.joined(separator: "\n            ")
     let assignmentsStr = assignments.joined(separator: "\n        ")
+    let access = accessLevel(of: declaration)
 
     let initDecl: DeclSyntax = """
-      init(json: borrowing JSON.Node) throws {
+      \(raw: access)init(json: borrowing JSON.Node) throws {
           let object: JSON.Object = try .init(json: json)
           \(raw: varDeclsStr)
           for field: JSON.FieldDecoder<String> in copy object {

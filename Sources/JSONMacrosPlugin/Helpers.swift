@@ -107,6 +107,18 @@ private func extractJSONKey(from attributes: AttributeListSyntax) -> String? {
   return nil
 }
 
+func accessLevel(of declaration: some DeclGroupSyntax) -> String {
+  for modifier in declaration.modifiers {
+    switch modifier.name.tokenKind {
+    case .keyword(.public), .keyword(.open), .keyword(.package):
+      return modifier.name.trimmedDescription + " "
+    default:
+      continue
+    }
+  }
+  return ""
+}
+
 private func hasAttribute(_ name: String, in attributes: AttributeListSyntax) -> Bool {
   attributes.contains { attribute in
     guard let attr = attribute.as(AttributeSyntax.self),
