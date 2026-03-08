@@ -16,6 +16,7 @@ extension JSONDecodableMacro: MemberMacro {
       return []
     }
 
+    let naming = extractNamingStrategy(from: node) ?? .camelCase
     let properties = extractStoredProperties(from: declaration.memberBlock.members)
     let unknownFieldsProp = properties.first(where: \.isUnknownFields)
     let regularProps = properties.filter { !$0.isUnknownFields }
@@ -23,62 +24,68 @@ extension JSONDecodableMacro: MemberMacro {
     // Variable declarations
     var varDecls: [String] = []
     for prop in regularProps {
-      if prop.isOptional {
-        varDecls.append("var \(prop.name): \(prop.type) = nil")
-      } else {
-        varDecls.append("var \(prop.name): \(prop.type)?")
-      }
+      varDecls.append("var \(prop.name): \(prop.type)?")
     }
     if unknownFieldsProp != nil {
-      varDecls.append("var unknownFields: [(key: JSON.Key, value: JSON.Node)] = []")
+      varDecls.append(
+        "var unknownFields: [(key: String, value: JSONPrimitive)] = []")
     }
 
     // Switch cases
     var switchCases: [String] = []
     for prop in regularProps {
-      let key = prop.jsonKey ?? prop.name
-      switchCases.append("case \"\(key)\": \(prop.name) = try field.decode()")
+      let key = prop.jsonKey ?? naming.convert(prop.name)
+      let baseType = prop.isOptional ? prop.wrappedType ?? "\(prop.type)" : "\(prop.type)"
+      switchCases.append(
+        "case \"\(key)\": \(prop.name) = try valueDecoder.decode(\(baseType).self)")
     }
     if unknownFieldsProp != nil {
       switchCases.append(
-        "default: unknownFields.append((key: .init(rawValue: field.key), value: field.value))")
+        "default: unknownFields.append((key: key, value: try valueDecoder.decode(JSONPrimitive.self)))"
+      )
     } else {
       switchCases.append("default: break")
     }
 
-    // Assignment statements
-    var assignments: [String] = []
+    // Return expression parts
+    var initArgs: [String] = []
     for prop in regularProps {
-      let key = prop.jsonKey ?? prop.name
+      let key = prop.jsonKey ?? naming.convert(prop.name)
       if prop.isOptional {
-        assignments.append("self.\(prop.name) = \(prop.name)")
+        initArgs.append("\(prop.name): \(prop.name) ?? nil")
       } else {
-        assignments.append("self.\(prop.name) = try \(prop.name).unwrap(key: \"\(key)\")")
+        initArgs.append(
+          "\(prop.name): try \(prop.name).unwrap(key: \"\(key)\")")
       }
     }
     if let unknownFieldsProp {
-      assignments.append("self.\(unknownFieldsProp.name) = .init(unknownFields)")
+      initArgs.append("\(unknownFieldsProp.name): unknownFields")
     }
 
-    let varDeclsStr = varDecls.joined(separator: "\n        ")
-    let switchCasesStr = switchCases.joined(separator: "\n            ")
-    let assignmentsStr = assignments.joined(separator: "\n        ")
+    let varDeclsStr = varDecls.joined(separator: "\n            ")
+    let switchCasesStr = switchCases.joined(separator: "\n                ")
+    let initArgsStr = initArgs.joined(separator: ",\n                ")
     let access = accessLevel(of: declaration)
+    let typeName = typeNameOf(declaration)
 
-    let initDecl: DeclSyntax = """
-      \(raw: access)init(json: borrowing JSON.Node) throws {
-          let object: JSON.Object = try .init(json: json)
-          \(raw: varDeclsStr)
-          for field: JSON.FieldDecoder<String> in copy object {
-              switch field.key {
-              \(raw: switchCasesStr)
+    let decl: DeclSyntax = """
+      \(raw: access)static func decode<D: JSONDecoderProtocol & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
+          try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+              \(raw: varDeclsStr)
+              try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                  switch key {
+                  \(raw: switchCasesStr)
+                  }
+                  return false
               }
+              return \(raw: typeName)(
+                  \(raw: initArgsStr)
+              )
           }
-          \(raw: assignmentsStr)
       }
       """
 
-    return [initDecl]
+    return [decl]
   }
 }
 

@@ -26,10 +26,10 @@ struct JSONEncodableTests {
             var name: String
             var price: Double
 
-            func encode(to json: inout JSON) {
-                json(Any.self) { encoder in
-                    encoder["name"] = self.name
-                    encoder["price"] = self.price
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: nil) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(key: "name", value: self.name)
+                    try structEncoder.encode(key: "price", value: self.price)
                 }
             }
         }
@@ -55,10 +55,12 @@ struct JSONEncodableTests {
             var name: String
             var bio: String?
 
-            func encode(to json: inout JSON) {
-                json(Any.self) { encoder in
-                    encoder["name"] = self.name
-                    encoder["bio"] = self.bio
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: nil) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(key: "name", value: self.name)
+                    if let value = self.bio {
+                        try structEncoder.encode(key: "bio", value: value)
+                    }
                 }
             }
         }
@@ -82,9 +84,9 @@ struct JSONEncodableTests {
         struct User {
             var userName: String
 
-            func encode(to json: inout JSON) {
-                json(Any.self) { encoder in
-                    encoder["user_name"] = self.userName
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: nil) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(key: "user_name", value: self.userName)
                 }
             }
         }
@@ -116,25 +118,29 @@ struct JSONEncodableTests {
             var name: String
             var age: Int
 
-            init(json: borrowing JSON.Node) throws {
-                let object: JSON.Object = try .init(json: json)
-                var name: String?
-                var age: Int?
-                for field: JSON.FieldDecoder<String> in copy object {
-                    switch field.key {
-                    case "name": name = try field.decode()
-                    case "age": age = try field.decode()
-                    default: break
+            static func decode<D: JSONDecoderProtocol & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var name: String?
+                    var age: Int?
+                    try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                        switch key {
+                        case "name": name = try valueDecoder.decode(String.self)
+                        case "age": age = try valueDecoder.decode(Int.self)
+                        default: break
+                        }
+                        return false
                     }
+                    return User(
+                        name: try name.unwrap(key: "name"),
+                        age: try age.unwrap(key: "age")
+                    )
                 }
-                self.name = try name.unwrap(key: "name")
-                self.age = try age.unwrap(key: "age")
             }
 
-            func encode(to json: inout JSON) {
-                json(Any.self) { encoder in
-                    encoder["name"] = self.name
-                    encoder["age"] = self.age
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: nil) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(key: "name", value: self.name)
+                    try structEncoder.encode(key: "age", value: self.age)
                 }
             }
         }
@@ -167,25 +173,29 @@ struct JSONEncodableTests {
             var name: String
             var age: Int
 
-            init(json: borrowing JSON.Node) throws {
-                let object: JSON.Object = try .init(json: json)
-                var name: String?
-                var age: Int?
-                for field: JSON.FieldDecoder<String> in copy object {
-                    switch field.key {
-                    case "name": name = try field.decode()
-                    case "age": age = try field.decode()
-                    default: break
+            static func decode<D: JSONDecoderProtocol & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var name: String?
+                    var age: Int?
+                    try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                        switch key {
+                        case "name": name = try valueDecoder.decode(String.self)
+                        case "age": age = try valueDecoder.decode(Int.self)
+                        default: break
+                        }
+                        return false
                     }
+                    return User(
+                        name: try name.unwrap(key: "name"),
+                        age: try age.unwrap(key: "age")
+                    )
                 }
-                self.name = try name.unwrap(key: "name")
-                self.age = try age.unwrap(key: "age")
             }
 
-            func encode(to json: inout JSON) {
-                json(Any.self) { encoder in
-                    encoder["name"] = self.name
-                    encoder["age"] = self.age
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: nil) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(key: "name", value: self.name)
+                    try structEncoder.encode(key: "age", value: self.age)
                 }
             }
         }
@@ -206,19 +216,19 @@ struct JSONEncodableTests {
       @JSONEncodable
       struct Market {
           var name: String
-          @JSONUnknownFields var unknownFields: JSON.Object
+          @JSONUnknownFields var unknownFields: [(key: String, value: JSONPrimitive)]
       }
       """,
       expandedSource: """
         struct Market {
             var name: String
-            var unknownFields: JSON.Object
+            var unknownFields: [(key: String, value: JSONPrimitive)]
 
-            func encode(to json: inout JSON) {
-                json(Any.self) { encoder in
-                    encoder["name"] = self.name
-                    for field: JSON.FieldDecoder<String> in self.unknownFields {
-                        encoder[field.key] = field.value
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: nil) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(key: "name", value: self.name)
+                    for (key, value) in self.unknownFields {
+                        try structEncoder.encode(key: key, value: value)
                     }
                 }
             }

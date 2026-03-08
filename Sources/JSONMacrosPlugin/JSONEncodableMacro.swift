@@ -16,20 +16,31 @@ extension JSONEncodableMacro: MemberMacro {
       return []
     }
 
+    let naming = extractNamingStrategy(from: node) ?? .camelCase
     let properties = extractStoredProperties(from: declaration.memberBlock.members)
     let unknownFieldsProp = properties.first(where: \.isUnknownFields)
     let regularProps = properties.filter { !$0.isUnknownFields }
 
     var encodingStatements: [String] = []
     for prop in regularProps {
-      let key = prop.jsonKey ?? prop.name
-      encodingStatements.append("encoder[\"\(key)\"] = self.\(prop.name)")
+      let key = prop.jsonKey ?? naming.convert(prop.name)
+      if prop.isOptional {
+        encodingStatements.append(
+          """
+          if let value = self.\(prop.name) {
+                      try structEncoder.encode(key: \"\(key)\", value: value)
+                  }
+          """)
+      } else {
+        encodingStatements.append(
+          "try structEncoder.encode(key: \"\(key)\", value: self.\(prop.name))")
+      }
     }
     if let unknownFieldsProp {
       encodingStatements.append(
         """
-        for field: JSON.FieldDecoder<String> in self.\(unknownFieldsProp.name) {
-                    encoder[field.key] = field.value
+        for (key, value) in self.\(unknownFieldsProp.name) {
+                    try structEncoder.encode(key: key, value: value)
                 }
         """)
     }
@@ -38,8 +49,8 @@ extension JSONEncodableMacro: MemberMacro {
     let access = accessLevel(of: declaration)
 
     let encodeDecl: DeclSyntax = """
-      \(raw: access)func encode(to json: inout JSON) {
-          json(Any.self) { encoder in
+      \(raw: access)func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+          try encoder.encodeStructFields(count: nil) { structEncoder throws(CodingError.Encoding) in
               \(raw: encodingStatementsStr)
           }
       }

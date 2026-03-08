@@ -5,6 +5,7 @@ struct StoredProperty {
   var name: String
   var type: TypeSyntax
   var isOptional: Bool
+  var wrappedType: String?
   var jsonKey: String?
   var isUnknownFields: Bool
 }
@@ -58,6 +59,7 @@ func extractStoredProperties(
       let name = pattern.identifier.trimmedDescription
       let type = typeAnnotation.type.trimmed
       let isOptional = isOptionalType(type)
+      let wrappedType = extractWrappedType(type)
       let jsonKey = extractJSONKey(from: varDecl.attributes)
       let isUnknownFields = hasAttribute("JSONUnknownFields", in: varDecl.attributes)
 
@@ -66,6 +68,7 @@ func extractStoredProperties(
           name: name,
           type: type,
           isOptional: isOptional,
+          wrappedType: wrappedType,
           jsonKey: jsonKey,
           isUnknownFields: isUnknownFields
         ))
@@ -88,6 +91,23 @@ private func isOptionalType(_ type: TypeSyntax) -> Bool {
     return true
   }
   return false
+}
+
+private func extractWrappedType(_ type: TypeSyntax) -> String? {
+  if let optionalType = type.as(OptionalTypeSyntax.self) {
+    return optionalType.wrappedType.trimmedDescription
+  }
+  if let optionalType = type.as(ImplicitlyUnwrappedOptionalTypeSyntax.self) {
+    return optionalType.wrappedType.trimmedDescription
+  }
+  if let identifierType = type.as(IdentifierTypeSyntax.self),
+    identifierType.name.trimmedDescription == "Optional",
+    let genericArgs = identifierType.genericArgumentClause?.arguments,
+    let firstArg = genericArgs.first
+  {
+    return firstArg.argument.trimmedDescription
+  }
+  return nil
 }
 
 private func extractJSONKey(from attributes: AttributeListSyntax) -> String? {
@@ -119,7 +139,7 @@ func accessLevel(of declaration: some DeclGroupSyntax) -> String {
   return ""
 }
 
-private func hasAttribute(_ name: String, in attributes: AttributeListSyntax) -> Bool {
+func hasAttribute(_ name: String, in attributes: AttributeListSyntax) -> Bool {
   attributes.contains { attribute in
     guard let attr = attribute.as(AttributeSyntax.self),
       let identifierType = attr.attributeName.as(IdentifierTypeSyntax.self)
@@ -128,4 +148,73 @@ private func hasAttribute(_ name: String, in attributes: AttributeListSyntax) ->
     }
     return identifierType.name.trimmedDescription == name
   }
+}
+
+// MARK: - Naming Strategy
+
+enum NamingStrategy {
+  case camelCase
+  case snakeCase
+  case upperSnakeCase
+
+  func convert(_ name: String) -> String {
+    switch self {
+    case .camelCase:
+      return name
+    case .snakeCase:
+      return camelCaseToSnakeCase(name)
+    case .upperSnakeCase:
+      return camelCaseToSnakeCase(name).uppercased()
+    }
+  }
+}
+
+func extractNamingStrategy(from node: AttributeSyntax, label: String = "naming") -> NamingStrategy?
+{
+  guard let arguments = node.arguments?.as(LabeledExprListSyntax.self) else {
+    return nil
+  }
+  for arg in arguments {
+    guard arg.label?.trimmedDescription == label,
+      let memberAccess = arg.expression.as(MemberAccessExprSyntax.self)
+    else {
+      continue
+    }
+    switch memberAccess.declName.baseName.trimmedDescription {
+    case "camelCase":
+      return .camelCase
+    case "snakeCase":
+      return .snakeCase
+    case "upperSnakeCase":
+      return .upperSnakeCase
+    default:
+      return nil
+    }
+  }
+  return nil
+}
+
+private func camelCaseToSnakeCase(_ input: String) -> String {
+  var result = ""
+  for (i, char) in input.enumerated() {
+    if char.isUppercase {
+      if i > 0 {
+        result.append("_")
+      }
+      result.append(char.lowercased())
+    } else {
+      result.append(char)
+    }
+  }
+  return result
+}
+
+func typeNameOf(_ declaration: some DeclGroupSyntax) -> String {
+  if let structDecl = declaration.as(StructDeclSyntax.self) {
+    return structDecl.name.trimmedDescription
+  }
+  if let classDecl = declaration.as(ClassDeclSyntax.self) {
+    return classDecl.name.trimmedDescription
+  }
+  return "Self"
 }
