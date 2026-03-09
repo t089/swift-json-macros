@@ -8,6 +8,7 @@ struct StoredProperty {
   var wrappedType: String?
   var jsonKey: String?
   var isUnknownFields: Bool
+  var isComputed: Bool = false
 }
 
 func extractStoredProperties(
@@ -23,24 +24,7 @@ func extractStoredProperties(
       continue
     }
 
-    // Skip computed properties (those with accessor blocks that aren't just stored)
     for binding in varDecl.bindings {
-      if let accessorBlock = binding.accessorBlock {
-        // If it has a code block accessor (get/set), it's computed
-        switch accessorBlock.accessors {
-        case .getter:
-          continue
-        case .accessors(let accessorList):
-          let hasGetOrSet = accessorList.contains { accessor in
-            accessor.accessorSpecifier.tokenKind == .keyword(.get)
-              || accessor.accessorSpecifier.tokenKind == .keyword(.set)
-          }
-          if hasGetOrSet {
-            continue
-          }
-        }
-      }
-
       // Skip static properties
       let isStatic = varDecl.modifiers.contains { modifier in
         modifier.name.tokenKind == .keyword(.static)
@@ -50,9 +34,38 @@ func extractStoredProperties(
         continue
       }
 
+      // Determine if this is a computed (read-only) property
+      var isComputed = false
+      if let accessorBlock = binding.accessorBlock {
+        switch accessorBlock.accessors {
+        case .getter:
+          // Read-only computed property: var x: T { value }
+          isComputed = true
+        case .accessors(let accessorList):
+          let hasGet = accessorList.contains { accessor in
+            accessor.accessorSpecifier.tokenKind == .keyword(.get)
+          }
+          let hasSet = accessorList.contains { accessor in
+            accessor.accessorSpecifier.tokenKind == .keyword(.set)
+          }
+          if hasGet && !hasSet {
+            // Explicit get-only: var x: T { get { value } }
+            isComputed = true
+          } else if hasGet && hasSet {
+            // Read-write computed property — skip
+            continue
+          }
+        }
+      }
+
       guard let pattern = binding.pattern.as(IdentifierPatternSyntax.self),
         let typeAnnotation = binding.typeAnnotation
       else {
+        continue
+      }
+
+      // Skip @JSONIgnore properties
+      if hasAttribute("JSONIgnore", in: varDecl.attributes) {
         continue
       }
 
@@ -70,7 +83,8 @@ func extractStoredProperties(
           isOptional: isOptional,
           wrappedType: wrappedType,
           jsonKey: jsonKey,
-          isUnknownFields: isUnknownFields
+          isUnknownFields: isUnknownFields,
+          isComputed: isComputed
         ))
     }
   }

@@ -7,6 +7,7 @@ import Testing
 private let testMacros: [String: Macro.Type] = [
   "JSONDecodable": JSONDecodableMacro.self,
   "JSONKey": JSONKeyMacro.self,
+  "JSONIgnore": JSONIgnoreMacro.self,
   "JSONUnknownFields": JSONUnknownFieldsMacro.self,
 ]
 
@@ -193,6 +194,7 @@ struct JSONDecodableTests {
                     try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
                         switch key {
                         case "name": name = try valueDecoder.decode(String.self)
+                        case "displayName": _ = try valueDecoder.decode(String.self)
                         default: break
                         }
                         return false
@@ -286,6 +288,44 @@ struct JSONDecodableTests {
         }
 
         extension User: JSONDecodable {
+        }
+        """,
+      macros: testMacros
+    )
+  }
+
+  @Test func ignoreProperty() {
+    assertMacroExpansion(
+      """
+      @JSONDecodable
+      struct Item {
+          var name: String
+          @JSONIgnore var cached: Int
+      }
+      """,
+      expandedSource: """
+        struct Item {
+            var name: String
+            var cached: Int
+
+            static func decode<D: JSONDecoderProtocol & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
+                try decoder.decodeStruct { structDecoder throws(CodingError.Decoding) in
+                    var name: String?
+                    try structDecoder.decodeEachKeyAndValue { key, valueDecoder throws(CodingError.Decoding) in
+                        switch key {
+                        case "name": name = try valueDecoder.decode(String.self)
+                        default: break
+                        }
+                        return false
+                    }
+                    return Item(
+                        name: try name.unwrap(key: "name")
+                    )
+                }
+            }
+        }
+
+        extension Item: JSONDecodable {
         }
         """,
       macros: testMacros

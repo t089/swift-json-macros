@@ -9,6 +9,7 @@ struct JSONMacrosPlugin: CompilerPlugin {
       JSONDecodableMacro.self,
       JSONEncodableMacro.self,
       JSONKeyMacro.self,
+      JSONIgnoreMacro.self,
       JSONUnknownFieldsMacro.self,
       JSONUnionMacro.self,
       JSONCaseMacro.self,

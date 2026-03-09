@@ -7,6 +7,7 @@ import Testing
 private let testMacros: [String: Macro.Type] = [
   "JSONEncodable": JSONEncodableMacro.self,
   "JSONKey": JSONKeyMacro.self,
+  "JSONIgnore": JSONIgnoreMacro.self,
   "JSONUnknownFields": JSONUnknownFieldsMacro.self,
 ]
 
@@ -235,6 +236,34 @@ struct JSONEncodableTests {
         }
 
         extension Market: JSONEncodable {
+        }
+        """,
+      macros: testMacros
+    )
+  }
+
+  @Test func ignoreProperty() {
+    assertMacroExpansion(
+      """
+      @JSONEncodable
+      struct Item {
+          var name: String
+          @JSONIgnore var cached: Int
+      }
+      """,
+      expandedSource: """
+        struct Item {
+            var name: String
+            var cached: Int
+
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                try encoder.encodeStructFields(count: nil) { structEncoder throws(CodingError.Encoding) in
+                    try structEncoder.encode(key: "name", value: self.name)
+                }
+            }
+        }
+
+        extension Item: JSONEncodable {
         }
         """,
       macros: testMacros

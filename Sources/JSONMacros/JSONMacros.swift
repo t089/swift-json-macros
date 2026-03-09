@@ -26,6 +26,10 @@ public macro JSONKey(_ name: String) =
   #externalMacro(module: "JSONMacrosPlugin", type: "JSONKeyMacro")
 
 @attached(peer)
+public macro JSONIgnore() =
+  #externalMacro(module: "JSONMacrosPlugin", type: "JSONIgnoreMacro")
+
+@attached(peer)
 public macro JSONUnknownFields() =
   #externalMacro(module: "JSONMacrosPlugin", type: "JSONUnknownFieldsMacro")
 

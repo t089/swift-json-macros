@@ -73,6 +73,12 @@ struct SnakeCaseUser {
   var createdAt: String
 }
 
+@JSONCodable
+struct WithIgnored {
+  var name: String
+  @JSONIgnore var cached: String = "default"
+}
+
 // Helper to decode JSON from a string
 private func decode<T: JSONDecodable>(_ type: T.Type, from string: String) throws -> T {
   let decoder = NewJSONDecoder()
@@ -231,6 +237,16 @@ struct DecodingTests {
     #expect(value.isPublished == true)
   }
 
+  @Test func ignoredFieldNotDecoded() throws {
+    let value = try decode(
+      WithIgnored.self,
+      from: """
+        {"name":"Alice","cached":"should be ignored"}
+        """)
+    #expect(value.name == "Alice")
+    #expect(value.cached == "default")
+  }
+
   @Test func complexOptionalNil() throws {
     let value = try decode(
       Complex.self,
@@ -344,6 +360,15 @@ struct EncodingTests {
     #expect(decoded.tags == ["swift", "json"])
     #expect(decoded.address?.street == "X")
     #expect(decoded.isPublished == true)
+  }
+
+  @Test func ignoredFieldNotEncoded() throws {
+    var value = WithIgnored(name: "Alice")
+    value.cached = "something"
+    let data = try encode(value)
+    let jsonString = String(decoding: data, as: UTF8.self)
+    #expect(jsonString.contains("\"name\""))
+    #expect(!jsonString.contains("cached"))
   }
 }
 

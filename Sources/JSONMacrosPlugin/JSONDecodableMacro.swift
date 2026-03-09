@@ -20,10 +20,12 @@ extension JSONDecodableMacro: MemberMacro {
     let properties = extractStoredProperties(from: declaration.memberBlock.members)
     let unknownFieldsProp = properties.first(where: \.isUnknownFields)
     let regularProps = properties.filter { !$0.isUnknownFields }
+    let storedProps = regularProps.filter { !$0.isComputed }
+    let computedProps = regularProps.filter { $0.isComputed }
 
-    // Variable declarations
+    // Variable declarations (only for stored properties)
     var varDecls: [String] = []
-    for prop in regularProps {
+    for prop in storedProps {
       varDecls.append("var \(prop.name): \(prop.type)?")
     }
     if unknownFieldsProp != nil {
@@ -33,7 +35,7 @@ extension JSONDecodableMacro: MemberMacro {
 
     // Switch cases
     var switchCases: [String] = []
-    for prop in regularProps {
+    for prop in storedProps {
       let key = prop.jsonKey ?? naming.convert(prop.name)
       if prop.isOptional {
         let baseType = prop.wrappedType ?? "\(prop.type)"
@@ -45,6 +47,12 @@ extension JSONDecodableMacro: MemberMacro {
           "case \"\(key)\": \(prop.name) = try valueDecoder.decode(\(prop.type).self)")
       }
     }
+    // Computed properties: consume the value from the decoder (e.g. discriminator fields)
+    for prop in computedProps {
+      let key = prop.jsonKey ?? naming.convert(prop.name)
+      switchCases.append(
+        "case \"\(key)\": _ = try valueDecoder.decode(\(prop.type).self)")
+    }
     if unknownFieldsProp != nil {
       switchCases.append(
         "default: unknownFields.append((key: key, value: try valueDecoder.decode(JSONPrimitive.self)))"
@@ -53,9 +61,9 @@ extension JSONDecodableMacro: MemberMacro {
       switchCases.append("default: break")
     }
 
-    // Return expression parts
+    // Return expression parts (only stored properties)
     var initArgs: [String] = []
-    for prop in regularProps {
+    for prop in storedProps {
       let key = prop.jsonKey ?? naming.convert(prop.name)
       if prop.isOptional {
         initArgs.append("\(prop.name): \(prop.name) ?? nil")
