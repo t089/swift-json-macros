@@ -35,9 +35,15 @@ extension JSONDecodableMacro: MemberMacro {
     var switchCases: [String] = []
     for prop in regularProps {
       let key = prop.jsonKey ?? naming.convert(prop.name)
-      let baseType = prop.isOptional ? prop.wrappedType ?? "\(prop.type)" : "\(prop.type)"
-      switchCases.append(
-        "case \"\(key)\": \(prop.name) = try valueDecoder.decode(\(baseType).self)")
+      if prop.isOptional {
+        let baseType = prop.wrappedType ?? "\(prop.type)"
+        switchCases.append(
+          "case \"\(key)\": if try !valueDecoder.decodeNil() { \(prop.name) = try valueDecoder.decode(\(baseType).self) }"
+        )
+      } else {
+        switchCases.append(
+          "case \"\(key)\": \(prop.name) = try valueDecoder.decode(\(prop.type).self)")
+      }
     }
     if unknownFieldsProp != nil {
       switchCases.append(
