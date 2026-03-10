@@ -103,7 +103,7 @@ enum ContentBlock {
 
 ## Requirements
 
-- Swift 6.2+
+- Swift 6.3+
 - [swift-foundation](https://github.com/apple/swift-foundation) (experimental/new-codable branch)
 
 ## Installation
