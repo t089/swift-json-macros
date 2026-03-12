@@ -5,6 +5,7 @@ import PackageDescription
 
 let package = Package(
     name: "swift-json-macros",
+    platforms: [.macOS(.v15)],
     products: [
         .library(
             name: "JSONMacros",
