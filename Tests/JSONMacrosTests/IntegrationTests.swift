@@ -9,14 +9,14 @@ import Testing
 
 // MARK: - Test types
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct Address {
   var street: String
   var city: String
   var zip: Int
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct BasicTypes {
   var name: String
   var age: Int
@@ -24,41 +24,41 @@ struct BasicTypes {
   var isActive: Bool
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct WithOptionals {
   var name: String
   var bio: String?
   var age: Optional<Int>
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct WithArrays {
   var tags: [String]
   var scores: [Int]
   var nested: [[Double]]
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct WithNested {
   var name: String
   var address: Address
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct WithCustomKeys {
   @JSONKey("user_name") var userName: String
   @JSONKey("is_active") var isActive: Bool
   @JSONKey("created_at") var createdAt: String
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct WithUnknownFields {
   var name: String
   var age: Int
   @JSONUnknownFields var unknownFields: [(key: String, value: JSONPrimitive)]
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct Complex {
   var title: String
   var tags: [String]
@@ -66,14 +66,14 @@ struct Complex {
   @JSONKey("is_published") var isPublished: Bool
 }
 
-@JSONCodable(naming: .snakeCase)
+@JSONMacros.JSONCodable(naming: .snakeCase)
 struct SnakeCaseUser {
   var userName: String
   var isActive: Bool
   var createdAt: String
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct WithIgnored {
   var name: String
   @JSONIgnore var cached: String = "default"

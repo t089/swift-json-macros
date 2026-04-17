@@ -24,6 +24,28 @@ struct Market {
 
 Use `@JSONDecodable` or `@JSONEncodable` separately if you only need one direction.
 
+### Resolving collisions with Foundation
+
+The `NewCodable` module from swift-foundation now ships its own `@JSONEncodable`,
+`@JSONDecodable`, and `@JSONCodable` macros. Because `JSONMacros` re-exports
+`NewCodable`, both sets are visible at the same time and unqualified `@JSONCodable`
+is ambiguous — Swift will silently pick Foundation's version, which does not support
+`naming:` or `@JSONUnion` integration.
+
+To use this package's macros, either pass an argument (which only ours accepts) or
+prefix the module name:
+
+```swift
+@JSONCodable(naming: .camelCase)  // unambiguous via argument
+struct User { ... }
+
+@JSONMacros.JSONCodable           // unambiguous via module prefix
+struct User { ... }
+```
+
+The other macros (`@JSONKey`, `@JSONIgnore`, `@JSONUnknownFields`, `@JSONUnion`,
+`@JSONCase`, `@JSONDefaultCase`) are unique to this package and need no qualification.
+
 ### Naming strategies
 
 ```swift

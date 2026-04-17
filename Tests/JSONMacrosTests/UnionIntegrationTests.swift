@@ -9,13 +9,13 @@ import Testing
 
 // MARK: - Union test types
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct Circle {
   var type: String
   var radius: Double
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct Rectangle {
   var type: String
   var width: Double
@@ -28,13 +28,13 @@ enum Shape {
   case rectangle(Rectangle)
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct TextBlock {
   var type: String
   var text: String
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct ImageBlock {
   var type: String
   var url: String
@@ -51,13 +51,13 @@ enum ContentBlock {
 
 // Types using computed property for discriminator (no stored type property needed)
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct CircleV2 {
   var type: String { "circle" }
   var radius: Double
 }
 
-@JSONCodable
+@JSONMacros.JSONCodable
 struct RectangleV2 {
   var type: String { "rectangle" }
   var width: Double
