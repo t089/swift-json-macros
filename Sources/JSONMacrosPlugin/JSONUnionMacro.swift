@@ -5,7 +5,7 @@ public struct JSONUnionMacro {}
 
 struct UnionCase {
   var caseName: String
-  var associatedType: String
+  var associatedType: String?
   var typeStrings: [String]
   var isDefault: Bool
 }
@@ -33,7 +33,8 @@ extension JSONUnionMacro: MemberMacro {
 
     let decodeDecl = generateDecode(
       cases: cases, discriminatorKey: discriminatorKey, access: access)
-    let encodeDecl = generateEncode(cases: cases, access: access)
+    let encodeDecl = generateEncode(
+      cases: cases, discriminatorKey: discriminatorKey, access: access)
 
     return [decodeDecl, encodeDecl]
   }
@@ -47,21 +48,29 @@ extension JSONUnionMacro: MemberMacro {
     var switchCases: [String] = []
     for c in regularCases {
       let patterns = c.typeStrings.map { "\"\($0)\"" }.joined(separator: ", ")
-      switchCases.append(
-        """
-        case \(patterns):
-                        var d = JSONPrimitiveDecoder(value: primitive)
-                        return .\(c.caseName)(try d.decode(\(c.associatedType).self))
-        """)
+      if let associatedType = c.associatedType {
+        switchCases.append(
+          """
+          case \(patterns):
+                          var d = JSONPrimitiveDecoder(value: primitive)
+                          return .\(c.caseName)(try d.decode(\(associatedType).self))
+          """)
+      } else {
+        switchCases.append("case \(patterns): return .\(c.caseName)")
+      }
     }
 
     let defaultBranch: String
     if let defaultCase {
-      defaultBranch = """
-        default:
-                        var d = JSONPrimitiveDecoder(value: primitive)
-                        return .\(defaultCase.caseName)(try d.decode(\(defaultCase.associatedType).self))
-        """
+      if let associatedType = defaultCase.associatedType {
+        defaultBranch = """
+          default:
+                          var d = JSONPrimitiveDecoder(value: primitive)
+                          return .\(defaultCase.caseName)(try d.decode(\(associatedType).self))
+          """
+      } else {
+        defaultBranch = "default: return .\(defaultCase.caseName)"
+      }
     } else {
       defaultBranch = """
         default:
@@ -94,11 +103,25 @@ extension JSONUnionMacro: MemberMacro {
       """
   }
 
-  private static func generateEncode(cases: [UnionCase], access: String) -> DeclSyntax {
+  private static func generateEncode(
+    cases: [UnionCase], discriminatorKey: String, access: String
+  ) -> DeclSyntax {
     var switchCases: [String] = []
     for c in cases {
-      switchCases.append(
-        "case .\(c.caseName)(let content): try content.encode(to: &encoder)")
+      if c.associatedType == nil {
+        // Payload-less case: emit just the discriminator field.
+        let typeString = c.typeStrings.first ?? c.caseName
+        switchCases.append(
+          """
+          case .\(c.caseName):
+                      try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                          try structEncoder.encode(key: "\(discriminatorKey)", value: "\(typeString)")
+                      }
+          """)
+      } else {
+        switchCases.append(
+          "case .\(c.caseName)(let content): try content.encode(to: &encoder)")
+      }
     }
     let switchCasesStr = switchCases.joined(separator: "\n            ")
 
@@ -159,13 +182,7 @@ private func extractUnionCases(
     for element in caseDecl.elements {
       let caseName = element.name.trimmedDescription
 
-      guard let paramClause = element.parameterClause,
-        let firstParam = paramClause.parameters.first
-      else {
-        continue
-      }
-
-      let associatedType = firstParam.type.trimmedDescription
+      let associatedType = element.parameterClause?.parameters.first?.type.trimmedDescription
       let isDefault = hasAttribute("JSONDefaultCase", in: caseDecl.attributes)
       let customNames = extractCaseNames(from: caseDecl.attributes)
 

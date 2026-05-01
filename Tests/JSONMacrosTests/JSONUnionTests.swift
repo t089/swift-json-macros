@@ -294,6 +294,62 @@ struct JSONUnionTests {
     )
   }
 
+  @Test func payloadlessCase() {
+    assertMacroExpansion(
+      """
+      @JSONUnion("type")
+      enum Event {
+          case ping
+          case message(Message)
+      }
+      """,
+      expandedSource: """
+        enum Event {
+            case ping
+            case message(Message)
+
+            static func decode<D: JSONDecoderProtocol & ~Escapable>(from decoder: inout D) throws(CodingError.Decoding) -> Self {
+                try decoder.decodeStruct { s throws(CodingError.Decoding) in
+                    var type: String?
+                    var fields: [(key: String, value: JSONPrimitive)] = []
+                    try s.decodeEachKeyAndValue { (key, valueDecoder: inout _) throws(CodingError.Decoding) -> Void in
+                        if key == "type" {
+                            type = try valueDecoder.decode(String.self)
+                            fields.append((key: key, value: .string(type!)))
+                        } else {
+                            fields.append((key: key, value: try valueDecoder.decodeJSONPrimitive()))
+                        }
+                    }
+                    let primitive = JSONPrimitive.dictionary(fields)
+                    switch type {
+                    case "ping": return .ping
+                    case "message":
+                        var d = JSONPrimitiveDecoder(value: primitive)
+                        return .message(try d.decode(Message.self))
+                    default:
+                        throw CodingError.dataCorrupted(debugDescription: "Unknown \\"type\\" value: \\(type ?? \\"nil\\")")
+                    }
+                }
+            }
+
+            func encode(to encoder: inout JSONDirectEncoder) throws(CodingError.Encoding) {
+                switch self {
+                case .ping:
+                    try encoder.encodeStructFields(count: 1) { structEncoder throws(CodingError.Encoding) in
+                        try structEncoder.encode(key: "type", value: "ping")
+                    }
+                case .message(let content): try content.encode(to: &encoder)
+                }
+            }
+        }
+
+        extension Event: JSONDecodable, JSONEncodable {
+        }
+        """,
+      macros: testMacros
+    )
+  }
+
   @Test func appliedToStruct() {
     assertMacroExpansion(
       """

@@ -70,6 +70,22 @@ enum ShapeV2 {
   case rectangle(RectangleV2)
 }
 
+// Payload-less and mixed cases
+
+@JSONMacros.JSONCodable
+struct ChatMessage {
+  var type: String
+  var text: String
+}
+
+@JSONUnion("type")
+enum ChatEvent {
+  case ping
+  @JSONCase("pong")
+  case heartbeat
+  case message(ChatMessage)
+}
+
 private func decode<T: JSONDecodable>(_ type: T.Type, from string: String) throws -> T {
   let decoder = NewJSONDecoder()
   return try decoder.decode(type, from: Data(string.utf8))
@@ -159,6 +175,59 @@ struct UnionTests {
       return
     }
     #expect(circle.radius == 3.14)
+  }
+
+  // MARK: - Payload-less cases
+
+  @Test func payloadlessCase() throws {
+    let event = try decode(
+      ChatEvent.self,
+      from: """
+        {"type":"ping"}
+        """)
+    guard case .ping = event else {
+      Issue.record("Expected ping")
+      return
+    }
+
+    let data = try encode(event)
+    let jsonString = String(decoding: data, as: UTF8.self)
+    #expect(jsonString.contains("\"type\":\"ping\""))
+
+    let redecoded = try NewJSONDecoder().decode(ChatEvent.self, from: data)
+    guard case .ping = redecoded else {
+      Issue.record("Expected ping after round-trip")
+      return
+    }
+  }
+
+  @Test func payloadlessCaseWithCustomName() throws {
+    let event = try decode(
+      ChatEvent.self,
+      from: """
+        {"type":"pong"}
+        """)
+    guard case .heartbeat = event else {
+      Issue.record("Expected heartbeat")
+      return
+    }
+
+    let data = try encode(event)
+    let jsonString = String(decoding: data, as: UTF8.self)
+    #expect(jsonString.contains("\"type\":\"pong\""))
+  }
+
+  @Test func payloadlessAndPayloadMixed() throws {
+    let event = try decode(
+      ChatEvent.self,
+      from: """
+        {"type":"message","text":"hi"}
+        """)
+    guard case .message(let content) = event else {
+      Issue.record("Expected message")
+      return
+    }
+    #expect(content.text == "hi")
   }
 
   // MARK: - Discriminator auto-generation tests
