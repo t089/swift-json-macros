@@ -16,13 +16,14 @@ extension JSONEncodableMacro: MemberMacro {
       return []
     }
 
+    let naming = extractNamingStrategy(from: node) ?? .camelCase
     let properties = extractStoredProperties(from: declaration.memberBlock.members)
     let unknownFieldsProp = properties.first(where: \.isUnknownFields)
     let regularProps = properties.filter { !$0.isUnknownFields }
 
     var encodingStatements: [String] = []
     for prop in regularProps {
-      let key = prop.jsonKey ?? prop.name
+      let key = prop.jsonKey ?? naming.convert(prop.name)
       encodingStatements.append("encoder[\"\(key)\"] = self.\(prop.name)")
     }
     if let unknownFieldsProp {

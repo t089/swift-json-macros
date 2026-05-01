@@ -157,7 +157,7 @@ struct JSONDecodableTests {
     )
   }
 
-  @Test func skipsComputedProperties() {
+  @Test func computedPropertiesConsumedButNotStored() {
     assertMacroExpansion(
       """
       @JSONDecodable
@@ -181,6 +181,7 @@ struct JSONDecodableTests {
                 for field: JSON.FieldDecoder<String> in copy object {
                     switch field.key {
                     case "name": name = try field.decode()
+                    case "displayName": _ = try field.decode(to: String.self)
                     default: break
                     }
                 }
