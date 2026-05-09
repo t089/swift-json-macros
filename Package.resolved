@@ -1,13 +1,13 @@
 {
-  "originHash" : "7e4fee79a2fb1ebc6553201564ee031985f910dde468a2371e33d8eff6827dfa",
+  "originHash" : "56b347b3c90e8b00869d19d24dc9aed4e177c4e151cd3c7163a93181c3f08d2a",
   "pins" : [
     {
       "identity" : "gram",
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/rarestype/gram",
       "state" : {
-        "revision" : "ef2f74d3d6fd79ad147b1c7aedd4345125f78339",
-        "version" : "1.1.0"
+        "revision" : "d9276e23523174cd04213e945f146dd9a553a571",
+        "version" : "2.0.0"
       }
     },
     {
@@ -15,8 +15,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/rarestype/swift-json",
       "state" : {
-        "revision" : "91404ff5962d010e450e3449eb3535d382e56f76",
-        "version" : "2.3.2"
+        "revision" : "d143531c410ca330d0f4162390ccc2666d6c80aa",
+        "version" : "3.3.1"
       }
     },
     {

@@ -14,7 +14,7 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "602.0.0"),
-        .package(url: "https://github.com/rarestype/swift-json", from: "2.3.2"),
+        .package(url: "https://github.com/rarestype/swift-json", "2.3.2"..<"4.0.0"),
     ],
     targets: [
         .macro(
